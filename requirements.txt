@@ -1,0 +1,4 @@
+Pillow
+lxml
+rich
+tqdm
