@@ -1,11 +1,10 @@
 from .bounding_box import BoundingBox
-from .bounding_boxes import BoundingBoxes
-from .utils import *
+from .annotation import Annotation, Annotations
 
 from os import PathLike
 from pathlib import Path
+
 import lxml.etree as ET
-from functools import reduce
 
 
 def _read_xml_object(obj) -> BoundingBox:
@@ -19,7 +18,7 @@ def _read_xml_object(obj) -> BoundingBox:
     return BoundingBox(label, xmin, ymin, xmax, ymax)
 
 
-def parse_xml(file: PathLike) -> BoundingBoxes:
+def parse_xml(file: PathLike) -> Annotation:
     """
     Parse an .xml file annotated with labelImg of other
     software that used the same anntotation format.
@@ -30,46 +29,49 @@ def parse_xml(file: PathLike) -> BoundingBoxes:
     top-left (xmin, ymin) and bottom-right (xmax, ymax) scheme.
 
     Parameters:
-    - file: the xml file to process
+    - file: the xml file to process.
     
     Returns:
-    - A BoundingBoxes object representing the image annotations
+    - An object representing the image annotations.
     """
     tree = ET.parse(str(file)).getroot()
+
     path = tree.find("path").text
     name = tree.find("filename").text
-    image = Path(path).with_name(name).expanduser().resolve()
+    image_path = Path(path).with_name(name).expanduser().resolve()
 
-    assert image.is_file(), f"Image '{image}' does not exists, the field 'path' of xml file '{file}' may be invalid"
+    img_size_et = tree.find("size")
+    img_w = int(img_size_et.find("width").text)
+    img_h = int(img_size_et.find("height").text)
 
-    return BoundingBoxes({str(image): [_read_xml_object(o) for o in tree.findall('object')]})
+    return Annotation(image_path, (img_w, img_h), [_read_xml_object(o) for o in tree.findall("object")])
 
 
-def parse_xml_folder(folder: PathLike) -> BoundingBoxes:
+def parse_xml_folder(folder: PathLike) -> Annotations:
     """
     Parse .xml annotations present in a folder. See `parse_xml`
     for more details.
 
     Parameters:
-    - folder: a path to a folder containing .xml annotations
+    - folder: a path to a folder containing .xml annotations.
 
     Returns:
-    - A BoundingBoxes object representing the annotations
+    - A list of annotations.
     """
     folder = Path(folder).expanduser().resolve()
     files = folder.glob("*.xml")
-    return reduce(BoundingBoxes.__ior__, (parse_xml(f) for f in files), BoundingBoxes())
+    return Annotations([parse_xml(f) for f in files])
 
 
-def parse_xml_folders(folders: "list[PathLike]") -> BoundingBoxes:
+def parse_xml_folders(folders: "list[PathLike]") -> Annotations:
     """
     Parse .xml annotations present in several folders. See `parse_xml`
     for more details.
 
     Parameters:
-    - folders: list of paths to folders containing .xml annotations
+    - folders: list of paths to folders containing .xml annotations.
 
     Returns:
-    - A BoundingBoxes object representing the annotations
+    - An list of annotations.
     """
-    return reduce(BoundingBoxes.__ior__, (parse_xml_folder(f) for f in folders), BoundingBoxes())
+    return Annotations([a for f in folders for a in parse_xml_folder(f)])

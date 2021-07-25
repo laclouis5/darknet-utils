@@ -101,7 +101,7 @@ class BoundingBoxes:
     def print_stats(self):
         """Prints the dataset statistics represented by this object."""
         tot_imgs = len(self)
-        all_boxes = group(self.all_boxes(), by_key=lambda v: v.label)
+        all_boxes = dict_grouping(self.all_boxes(), by_key=lambda v: v.label)
         tot_boxes = sum(len(v) for v in all_boxes.values())
 
         table = Table(title=f"{tot_imgs} Images", show_footer=True)

@@ -3,9 +3,9 @@ class BoundingBox:
     A bounding box with a label and an optional confidence.
     The coordinates are absolute (in pixels) and specified as the top-left
     point (xmin, ymin) and the bottom-right one (xmax, ymax).
-    the implementation takes care or edge-cases such as xmin being greater
-    than xmax.
     """
+
+    __slots__ = ("label", "_xmin", "_ymin", "_xmax", "_ymax", "confidence")
 
     def __init__(self, 
         label: str, 
@@ -13,15 +13,20 @@ class BoundingBox:
         ymin: float, 
         xmax: float, 
         ymax: float,
+        confidence: float = None
     ):
+        if confidence: 
+            assert 0.0 <= confidence <= 1.0, f"Confidence ({confidence}) should be in 0...1"
+
         self.label = label
         self._xmin = xmin
         self._ymin = ymin
         self._xmax = xmax
         self._ymax = ymax
+        self.confidence = confidence
 
     @property
-    def xmid(self) -> float:
+    def xmid(self) -> float: 
         return (self._xmax + self._xmin) / 2
 
     @property
@@ -52,44 +57,91 @@ class BoundingBox:
     def ymax(self) -> float:
         return max(self._ymin, self._ymax)
 
+    @xmid.setter
+    def xmid(self, value):
+        delta = self.xmid - value
+        self._xmin += delta
+        self._xmax += delta
+        
+    @ymid.setter
+    def ymid(self, value):
+        delta = self.ymid - value
+        self._ymin += delta
+        self._ymax += delta
+
+    @xmin.setter
+    def xmin(self, value):
+        self._xmin = value
+
+    @ymin.setter
+    def ymin(self, value):
+        self._ymin = value
+
+    @xmax.setter
+    def xmax(self, value):
+        self._xmax = value
+
+    @ymax.setter
+    def ymax(self, value):
+        self._ymax = value
+
+    @staticmethod
+    def from_xywh(
+        label: str, 
+        xmid: float, 
+        ymid: float, 
+        width: float, 
+        height: float, 
+        confidence: float = None
+    ) -> "BoundingBox":
+        """
+        Intantiates a BoundingBox from middle point (xmid, ymid)
+        and box size (width, height).
+        """
+        mid_w = width / 2
+        mid_h = height / 2
+
+        xmin = xmid - mid_w
+        ymin = ymid - mid_h
+        xmax = xmid + mid_w
+        ymax = ymid + mid_h
+
+        return BoundingBox(label, xmin, ymin, xmax, ymax, confidence)
+
     def yolo_coords(self, 
-        img_size, 
-        norm_ratio: float = None
+        img_size: "tuple[int, int]"
     ) -> "tuple[float, float, float, float]":
         """
         Convert the box coordinates to YOLO coordinate format
-        which is relative (xmid, ymid, width, height). If norm_ratio is not
-        None, the box width and height is normalized to the ratio.
+        which is relative (xmid, ymid, width, height).
 
         Parameters:
          - img_size: the image width and height in pixels
-         - norm_ratio: the lenght of square boxes for stem annotations
 
         Returns:
          - A 4-element tuple of relative coordinates (xmid, ymid, width, height)
         """
         img_w, img_h = img_size
-
-        if norm_ratio is not None:
-            assert 0 <= norm_ratio <=1, "norm_ratio should be in 0...1"
-            side = min(img_size) * norm_ratio
-            return self.xmid / img_w, self.ymid / img_h, side / img_w, side / img_h
-
         return self.xmid / img_w, self.ymid / img_h, self.width / img_w, self.height / img_h
 
-    def yolo_repr(self, img_size, norm_ratio: float = None) -> str:
+    def yolo_repr(self, 
+        img_size: "tuple[int, int]", 
+        include_confidence=True
+    ) -> str:
         """
         YOLO string representation of a box annotation, which is relative coordinates
         separated by a whitespace:
 
-         `<label> <xmid> <ymid> <width> <height>`
+        `<label> <optional: confidence> <xmid> <ymid> <width> <height>`
 
         Parameters:
          - img_size: the image width and height in pixels
-         - norm_ratio: the lenght of square boxes for stem annotations
+         - include_confidence: if True, bounding box confidence score is included if present
 
         Returns:
          - The string representation
         """
-        coords = self.yolo_coords(img_size, norm_ratio)
+        coords = self.yolo_coords(img_size)
+        if include_confidence and self.confidence is not None:
+            return " ".join((self.label, self.confidence, *(f"{c}" for c in coords)))      
         return " ".join((self.label, *(f"{c}" for c in coords)))

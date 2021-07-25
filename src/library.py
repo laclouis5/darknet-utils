@@ -1,35 +1,23 @@
-from .bounding_box import BoundingBox
-from .bounding_boxes import BoundingBoxes
-from .utils import image_size
+from .annotation import Annotation
+from .utils import *
 
 from os import PathLike
 from pathlib import Path
 from random import Random
 import shutil
+from copy import copy
 
 import lxml.etree as ET
 from tqdm.contrib import tenumerate
 
 
-def _get_yolo_repr(
-    box: BoundingBox,
-    img_size: "tuple[int, int]",
-    norm_ratio: float = None, 
-    norm_names: "list[str]" = ["tige", "stem"],
-) -> str:
-    if norm_ratio and any(n in box.label for n in norm_names):
-        return box.yolo_repr(img_size, norm_ratio)
-    
-    return box.yolo_repr(img_size)
-
-
 def create_yolo_trainval(
-    boxes: BoundingBoxes, 
+    annotations: "list[Annotation]", 
     save_dir: PathLike = "yolo_trainval/", 
     prefix: PathLike = "data/", 
     train_ratio: float = 80/100,
-    norm_ratio: float = None,
-    norm_names: "list[str]" = ["tige", "stem"],
+    shuffle: bool = True,
+    exist_ok: bool = False
 ):
     """
     Create a YOLO database suitable for training with Darknet
@@ -39,56 +27,47 @@ def create_yolo_trainval(
     images and annotations are stored.
 
     Parameters:
-    - boxes: the BoundingBoxes representing the annotations and
-    images for the database creation
+    - annotations: the annotations for the database creation.
     - save_dir: the path where to store the YOLO database
     - prefix: optional path prefix to insert before the image
-    paths stored in train.txt and val.txt
-    - train_ratio: the percent of images to use in the training set
-    - norm_ratio: if provided, BoundingBoxes with a label containing
-    a name present in 'norm_names' will have a box normalized to a 
-    square one with side length equal to norm_ratio * min(img_w, img_h)
-    - norm_names: a list of string fragments that may be found in a
-    BoundingBox label to be normalized
+    paths stored in train.txt and val.txt.
+    - train_ratio: the percent of images to use in the training set.
     """
+    assert 0.0 <= train_ratio <= 1.0, "train_ratio must be in 0...1"
+
     save_dir = Path(save_dir).expanduser().resolve()
+    prefix = Path(prefix)
     train_dir = save_dir / "train/"
     valid_dir = save_dir / "val/"
 
-    save_dir.mkdir()
-    train_dir.mkdir()
-    valid_dir.mkdir()
+    save_dir.mkdir(exist_ok=exist_ok)
+    train_dir.mkdir(exist_ok=exist_ok)
+    valid_dir.mkdir(exist_ok=exist_ok)
 
-    train_txt = save_dir / "train.txt"
-    valid_txt = save_dir / "val.txt"
+    if shuffle:
+        random_gen = Random(149_843_046_101)
+        annotations = copy(annotations)
+        random_gen.shuffle(annotations)
 
-    train_list = []
-    valid_list = []
+    len_train = int(train_ratio * len(annotations))
 
-    random_gen = Random(149_843_046_101)
-    names = random_gen.sample(boxes.image_names, len(boxes))
-    len_train = int(train_ratio * len(names))
-
-    for i, name in tenumerate(names, unit="imgs"):
+    for i, annotation in tenumerate(annotations, unit="imgs"):
         dir = train_dir if i < len_train else valid_dir
-        file_list = train_list if i < len_train else valid_list
-
-        img_boxes = boxes[name]
-        img_size = image_size(name)
-
-        img_filename = dir / (f"im_{i:06}" + Path(name).suffix)
+        img_filename = dir / f"im_{i:06}{annotation.image_path.suffix}"
         ann_filename = img_filename.with_suffix(".txt")
 
-        shutil.copy(name, str(img_filename))
+        shutil.copy(annotation.image_path, img_filename)
+        ann_filename.write_text(annotation.yolo_repr())
 
-        yolo_repr = "\n".join(_get_yolo_repr(b, img_size, norm_ratio, norm_names) for b in img_boxes)
-        ann_filename.write_text(yolo_repr)
+    train_file = save_dir / "train.txt"
+    valid_file = save_dir / "val.txt"
 
-        dir_str = Path("train/" if i < len_train else "val/")
-        file_list.append(Path(prefix) / dir_str / img_filename.name)
-
-    train_txt.write_text("\n".join(str(p) for p in train_list))
-    valid_txt.write_text("\n".join(str(p) for p in valid_list))
+    train_file.write_text(
+        "\n".join(str(train_dir / prefix / f"train/im_{i:06}{annotation.image_path.suffix}")
+            for i in range(len_train)))
+    valid_file.write_text(
+        "\n".join(str(valid_dir / prefix / f"val/im_{i:06}{annotation.image_path.suffix}" )
+            for i in range(len_train, len(annotations))))
 
 
 def create_noobj_folder(
@@ -110,7 +89,7 @@ def create_noobj_folder(
         filename = image.name
         _folder = image.parent.name
         path = folder / (image.stem + ".xml")
-        img_w, img_h = image_size(image)
+        img_w, img_h = get_image_size(image)
 
         tree = ET.Element("annotation")
 

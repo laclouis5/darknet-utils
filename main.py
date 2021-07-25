@@ -70,22 +70,22 @@ if __name__ == "__main__":
     ]
 
     no_obj_dir = "/media/deepwater/DATA/Shared/Louis/datasets/training_set/no_obj/"
-    
+
     folders = [base_path / folder for folder in folders]
     folders.append(no_obj_dir)
 
     fr_to_en = {"mais": "maize", "haricot": "bean", "mais_tige": "stem_maize", "haricot_tige": "stem_bean"}
     en_to_nb = {l: str(i) for i, l in enumerate(fr_to_en.values())}
-    classes = list(fr_to_en.keys())
+    labels = set(fr_to_en.keys())
+    stem_labels = {l for l in labels if "tige" in l}
 
     resolve_xml_file_paths(folders)
     create_noobj_folder(no_obj_dir)
 
-    boxes = parse_xml_folders(folders) \
-        .filter(lambda b: b.label in classes) \
+    annotations = parse_xml_folders(folders) \
+        .filter(lambda box: box.label in labels) \
+        .square_boxes(ratio=5.0/100, labels=stem_labels) \
         .map_labels(fr_to_en) \
-        .map_labels(en_to_nb)
-        
-    boxes.print_stats()
+        .print_stats()
 
-    create_yolo_trainval(boxes, norm_ratio=7.5/100)
+    create_yolo_trainval(annotations, exist_ok=True)
