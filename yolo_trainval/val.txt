@@ -1,1 +1,0 @@
-/Users/louislac/Documents/Etudes/PhD/Projet BIPBIP/Software/darknet-utils/yolo_trainval/val/data/val/im_000000.jpg
