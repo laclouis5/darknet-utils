@@ -1,23 +1,23 @@
-from .annotation import Annotation
+from .annotation import Annotations
 from .utils import *
 
 from os import PathLike
 from pathlib import Path
 from random import Random
 import shutil
-from copy import copy
 
 import lxml.etree as ET
 from tqdm.contrib import tenumerate
 
 
 def create_yolo_trainval(
-    annotations: "list[Annotation]", 
+    annotations: Annotations, 
     save_dir: PathLike = "yolo_trainval/", 
     prefix: PathLike = "data/", 
     train_ratio: float = 80/100,
     shuffle: bool = True,
-    exist_ok: bool = False
+    random_seed: int = 149_843_046_101,
+    exist_ok: bool = False,
 ):
     """
     Create a YOLO database suitable for training with Darknet
@@ -26,12 +26,16 @@ def create_yolo_trainval(
     You should first parse BoundingBoxes from directories where
     images and annotations are stored.
 
+    Randomness is reproductible if the annotation image paths
+    comparison order and number stay the same across runs.
+
     Parameters:
     - annotations: the annotations for the database creation.
     - save_dir: the path where to store the YOLO database
     - prefix: optional path prefix to insert before the image
     paths stored in train.txt and val.txt.
     - train_ratio: the percent of images to use in the training set.
+    - shuffle: set to True to shuffle the dataset.
     """
     assert 0.0 <= train_ratio <= 1.0, "train_ratio must be in 0...1"
 
@@ -45,8 +49,8 @@ def create_yolo_trainval(
     valid_dir.mkdir(exist_ok=exist_ok)
 
     if shuffle:
-        random_gen = Random(149_843_046_101)
-        annotations = copy(annotations)
+        annotations.annotations = sorted(annotations, key=lambda a: a.image_path)
+        random_gen = Random(random_seed)
         random_gen.shuffle(annotations)
 
     len_train = int(train_ratio * len(annotations))
@@ -63,10 +67,10 @@ def create_yolo_trainval(
     valid_file = save_dir / "val.txt"
 
     train_file.write_text(
-        "\n".join(str(train_dir / prefix / f"train/im_{i:06}{annotation.image_path.suffix}")
+        "\n".join(str(prefix / f"train/im_{i:06}{annotation.image_path.suffix}")
             for i in range(len_train)))
     valid_file.write_text(
-        "\n".join(str(valid_dir / prefix / f"val/im_{i:06}{annotation.image_path.suffix}" )
+        "\n".join(str(prefix / f"val/im_{i:06}{annotation.image_path.suffix}" )
             for i in range(len_train, len(annotations))))
 
 

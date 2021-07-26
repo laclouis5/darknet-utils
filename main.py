@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 if __name__ == "__main__":
-    base_path = Path("/media/deepwater/DATA/Shared/Louis/datasets/")
+    base_path = Path("~/Downloads/bipbip_database/")
 
     folders = [
         # Dataset 4.2
@@ -69,10 +69,8 @@ if __name__ == "__main__":
         "training_set/2021-03-29_larrere/row_1",
     ]
 
-    no_obj_dir = "/media/deepwater/DATA/Shared/Louis/datasets/training_set/no_obj/"
-
     folders = [base_path / folder for folder in folders]
-    folders.append(no_obj_dir)
+    no_obj_dir = base_path / "training_set/no_obj/"
 
     fr_to_en = {"mais": "maize", "haricot": "bean", "mais_tige": "stem_maize", "haricot_tige": "stem_bean"}
     en_to_nb = {l: str(i) for i, l in enumerate(fr_to_en.values())}
@@ -84,8 +82,10 @@ if __name__ == "__main__":
 
     annotations = parse_xml_folders(folders) \
         .filter(lambda box: box.label in labels) \
-        .square_boxes(ratio=5.0/100, labels=stem_labels) \
-        .map_labels(fr_to_en) \
-        .print_stats()
+        .remove_empty() \
+        .square_boxes(ratio=7.5/100, labels=stem_labels) \
+        .map_labels(fr_to_en)
+    annotations += parse_xml_folder(no_obj_dir)
+    annotations.print_stats()
 
-    create_yolo_trainval(annotations, exist_ok=True)
+    create_yolo_trainval(annotations, save_dir="~/Downloads/yolo/", exist_ok=True, shuffle=True)
