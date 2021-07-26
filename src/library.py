@@ -126,7 +126,9 @@ def resolve_xml_file_paths(folders: "list[PathLike]"):
     """
     for folder in folders:
         folder = Path(folder).expanduser().resolve()
+        
         for file in folder.glob("*.xml"):
-            tree = ET.parse(str(file))
-            tree.find("path").text = str(file)
+            filename = str(file)
+            tree = ET.parse(filename)
+            tree.find("path").text = filename
             file.write_text(ET.tostring(tree, encoding="unicode", pretty_print=True))
