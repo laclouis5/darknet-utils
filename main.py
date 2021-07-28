@@ -88,4 +88,4 @@ if __name__ == "__main__":
     annotations += parse_xml_folder(no_obj_dir)
     annotations.print_stats()
 
-    create_yolo_trainval(annotations, save_dir="~/Downloads/yolo/", exist_ok=True, shuffle=True)
+    create_yolo_trainval(annotations, exist_ok=True, shuffle=True)

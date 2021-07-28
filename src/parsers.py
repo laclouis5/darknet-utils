@@ -7,18 +7,7 @@ from pathlib import Path
 import lxml.etree as ET
 
 
-def _read_xml_object(obj) -> BoundingBox:
-    label = obj.find('name').text
-    box = obj.find('bndbox')
-    xmin = float(box.find('xmin').text)
-    ymin = float(box.find('ymin').text)
-    xmax = float(box.find('xmax').text)
-    ymax = float(box.find('ymax').text)
-
-    return BoundingBox(label, xmin, ymin, xmax, ymax)
-
-
-def parse_xml(file: PathLike) -> Annotation:
+def parse_xml_file(file: PathLike) -> Annotation:
     """
     Parse an .xml file annotated with labelImg of other
     software that used the same anntotation format.
@@ -47,7 +36,7 @@ def parse_xml(file: PathLike) -> Annotation:
     return Annotation(image_path, (img_w, img_h), [_read_xml_object(o) for o in tree.findall("object")])
 
 
-def parse_xml_folder(folder: PathLike) -> Annotations:
+def parse_xml_folder(folder: PathLike, recursive=False) -> Annotations:
     """
     Parse .xml annotations present in a folder. See `parse_xml`
     for more details.
@@ -59,11 +48,11 @@ def parse_xml_folder(folder: PathLike) -> Annotations:
     - A list of annotations.
     """
     folder = Path(folder).expanduser().resolve()
-    files = folder.glob("*.xml")
-    return Annotations([parse_xml(f) for f in files])
+    files = folder.glob("**/*.xml" if recursive else "*.xml")
+    return Annotations([parse_xml_file(f) for f in files])
 
 
-def parse_xml_folders(folders: "list[PathLike]") -> Annotations:
+def parse_xml_folders(folders: "list[PathLike]", recursive=False) -> Annotations:
     """
     Parse .xml annotations present in several folders. See `parse_xml`
     for more details.
@@ -74,4 +63,15 @@ def parse_xml_folders(folders: "list[PathLike]") -> Annotations:
     Returns:
     - An list of annotations.
     """
-    return Annotations([a for f in folders for a in parse_xml_folder(f)])
+    return Annotations([a for f in folders for a in parse_xml_folder(f, recursive)])
+
+
+def _read_xml_object(obj) -> BoundingBox:
+    label = obj.find('name').text
+    box = obj.find('bndbox')
+    xmin = float(box.find('xmin').text)
+    ymin = float(box.find('ymin').text)
+    xmax = float(box.find('xmax').text)
+    ymax = float(box.find('ymax').text)
+
+    return BoundingBox(label, xmin, ymin, xmax, ymax)
