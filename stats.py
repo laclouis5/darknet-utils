@@ -15,14 +15,21 @@ def parse_args():
         help="Weither to parse directories recursively or not.")
     parser.add_argument("--labels", "-l", nargs="+", type=str, default=None,
         help="The labels to parse.")
+    parser.add_argument("--show_empty", "-e", action="store_true",
+        help="Include empty annotations.")
 
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
+
     annotations = parse_xml_folders(
         args.folders, 
         recursive=args.recursive, 
         labels=args.labels)
+
+    if args.labels is not None and not args.show_empty:
+        annotations.remove_empty()
+
     annotations.print_stats()

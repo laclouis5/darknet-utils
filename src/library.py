@@ -8,10 +8,12 @@ import shutil
 
 import lxml.etree as ET
 from tqdm.contrib import tenumerate
+from tqdm.contrib.concurrent import thread_map
 
 
 def create_yolo_trainval(
-    annotations: Annotations, 
+    annotations: Annotations,
+    labels: "list[str]" = None,
     save_dir: PathLike = "yolo_trainval/", 
     prefix: PathLike = "data/", 
     train_ratio: float = 80/100,
@@ -31,8 +33,9 @@ def create_yolo_trainval(
 
     Parameters:
     - annotations: the annotations for the database creation.
-    - save_dir: the path where to store the YOLO database
-    - prefix: optional path prefix to insert before the image
+    - labels: list of labels specifying the label order in `obj.names`.
+    - save_dir: the path where to store the YOLO database.
+    - prefix: optional path prefix to insert before the image.
     paths stored in train.txt and val.txt.
     - train_ratio: the percent of images to use in the training set.
     - shuffle: set to True to shuffle the dataset.
@@ -47,6 +50,11 @@ def create_yolo_trainval(
     save_dir.mkdir(exist_ok=exist_ok)
     train_dir.mkdir(exist_ok=exist_ok)
     valid_dir.mkdir(exist_ok=exist_ok)
+
+    labels = labels or sorted(annotations.labels())
+    labels_to_numbers = {l: str(n) for n, l in enumerate(labels)}
+
+    annotations.map_labels(labels_to_numbers)
 
     if shuffle:
         annotations.annotations = sorted(annotations, key=lambda a: a.image_path)
@@ -65,6 +73,7 @@ def create_yolo_trainval(
 
     train_file = save_dir / "train.txt"
     valid_file = save_dir / "val.txt"
+    names_file = save_dir / "obj.names"
 
     train_file.write_text(
         "\n".join(str(prefix / f"train/im_{i:06}{annotation.image_path.suffix}")
@@ -72,6 +81,8 @@ def create_yolo_trainval(
     valid_file.write_text(
         "\n".join(str(prefix / f"val/im_{i:06}{annotation.image_path.suffix}" )
             for i in range(len_train, len(annotations))))
+
+    names_file.write_text("\n".join(labels))
 
 
 def create_noobj_folder(
@@ -114,12 +125,12 @@ def create_noobj_folder(
         path.write_text(ET.tostring(tree, encoding="unicode", pretty_print=True))
 
 
-def resolve_xml_file_paths(folders: "list[PathLike]"):
+def resolve_xml_file_paths(folders: "list[PathLike]", recursive: bool = False):
     """
     Change the 'path' field of xml file to be the current path
     of the xml file. this function should be used if the original 
-    database has been moved and the 'path' field no longer matches
-    the correct path.
+    database has been moved and the `path` field no longer matches
+    the file path.
 
     Parameters:
     - folders: paths to folders with .xml files to process
@@ -127,7 +138,7 @@ def resolve_xml_file_paths(folders: "list[PathLike]"):
     for folder in folders:
         folder = Path(folder).expanduser().resolve()
         
-        for file in folder.glob("*.xml"):
+        for file in folder.glob("**/*.xml" if recursive else "*.xml"):
             filename = str(file)
             tree = ET.parse(filename)
             tree.find("path").text = filename

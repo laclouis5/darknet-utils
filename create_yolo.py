@@ -27,6 +27,8 @@ def parse_args():
     parser.add_argument("--norm_ratio", "-n", type=float, default=7.5/100,
         help="The side length of the square bounding boxes expressed as \
             the percent of the image shortest side length.")
+    parser.add_argument("--remove_empty", "-e", action="store_true",
+        help="Do not use empty annotations.")
 
     return parser.parse_args()
 
@@ -34,26 +36,26 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
+    resolve_xml_file_paths(args.folders, recursive=args.recursive)
+
     annotations = parse_xml_folders(
         folders=args.folders, 
         recursive=args.recursive,
         labels=args.labels)
-    annotations.print_stats()
 
-    labels = sorted(annotations.labels())
-    labels_to_numbers = {l: str(n) for n, l in enumerate(labels)}
+    if args.remove_empty:
+        annotations.remove_empty()
+
+    annotations.print_stats()
 
     if args.norm is not None and len(args.norm) == 0:
         annotations.square_boxes(ratio=args.norm_ratio, labels=None)
     elif args.norm is not None:
         annotations.square_boxes(ratio=args.norm_ratio, labels=args.norm)
 
-    annotations.map_labels(labels_to_numbers)
-
     create_yolo_trainval(
-        annotations=annotations, 
+        annotations=annotations,
+        labels=args.labels,
         save_dir=args.save_dir, 
         train_ratio=args.train_ratio, 
         exist_ok=True)
-
-    (args.save_dir / "obj.names").write_text("\n".join(labels))
