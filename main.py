@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 if __name__ == "__main__":
-    base_path = Path("~/Downloads/bipbip_database/")
+    base_path = Path("/mnt/320CF1170CF0D737/Shared/Louis/datasets/")
 
     folders = [
         # Dataset 4.2
@@ -66,13 +66,23 @@ if __name__ == "__main__":
         "training_set/2020-10-12_montoldre/bean_4",
         "training_set/2020-10-12_montoldre/maize_4",
         # Dataset 9.0
-        "training_set/2021-03-29_larrere/row_1",
+        "training_set/2021-03-29_larrere/row_1",  # Can annotate row_2
+        # Database 10.0
+        "training_set/2021-05-24_BSA/leek/1",
+        "training_set/2021-05-24_BSA/leek/2",
+        "training_set/2021-05-24_BSA/leek/3",
+        # Database 11.0
+        "training_set/2021-07-20_ctifl/p0720_1706",
+        "training_set/2021-07-20_ctifl/p0721_0910",
+        "training_set/2021-07-20_ctifl/p0728_1738",
+        "training_set/2021-07-20_ctifl/p0802_0500",
     ]
 
     folders = [base_path / folder for folder in folders]
     no_obj_dir = base_path / "training_set/no_obj/"
 
-    fr_to_en = {"mais": "maize", "haricot": "bean", "mais_tige": "stem_maize", "haricot_tige": "stem_bean"}
+    # fr_to_en = {"mais": "maize", "haricot": "bean", "mais_tige": "stem_maize", "haricot_tige": "stem_bean"}
+    fr_to_en = {"poireau": "leek", "poireau_tige": "stem_leek"}
     en_to_nb = {l: str(i) for i, l in enumerate(fr_to_en.values())}
     labels = set(fr_to_en.keys())
     stem_labels = {l for l in labels if "tige" in l}
@@ -80,12 +90,12 @@ if __name__ == "__main__":
     resolve_xml_file_paths(folders)
     create_noobj_folder(no_obj_dir)
 
-    annotations = parse_xml_folders(folders) \
-        .filter(lambda box: box.label in labels) \
-        .remove_empty() \
+    annotations = parse_xml_folders(folders, labels=labels) \
         .square_boxes(ratio=7.5/100, labels=stem_labels) \
-        .map_labels(fr_to_en)
+        .map_labels(fr_to_en) \
+        .map_labels(en_to_nb)
+
     annotations += parse_xml_folder(no_obj_dir)
     annotations.print_stats()
 
-    create_yolo_trainval(annotations, exist_ok=True, shuffle=True)
+    create_yolo_trainval(annotations, exist_ok=True)

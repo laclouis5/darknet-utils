@@ -13,10 +13,16 @@ def parse_args():
         help="The folders to parse.")
     parser.add_argument("--recursive", "-r", action="store_true",
         help="Weither to parse directories recursively or not.")
+    parser.add_argument("--labels", "-l", nargs="*", type=str, default=None,
+        help="The labels to parse.")
 
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    parse_xml_folders(args.folders, recursive=args.recursive).print_stats()
+    annotations = parse_xml_folders(
+        args.folders, 
+        recursive=args.recursive, 
+        labels=args.labels)
+    annotations.print_stats()

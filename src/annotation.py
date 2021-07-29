@@ -37,10 +37,19 @@ class Annotation:
     def image_name(self) -> str:
         """The image name."""
         return self.image_path.name
+
+    @property
+    def is_empty(self) -> bool:
+        return len(self.boxes) == 0
+
+    def labels(self) -> "set[str]":
+        return {b.label for b in self.boxes}
     
     def filter(self, is_included: Callable[[BoundingBox], bool]) -> "Annotation":
         """
-        Filter bounding boxes given the box predicate.
+        Filter bounding boxes given the box predicate. 
+        
+        WARNING: This can result in an empty annotation.
         
         Parameters:
         - is_included: the box predicate.
@@ -137,7 +146,7 @@ class Annotations:
 
     def labels(self) -> "set[str]":
         """Returns the unique labels of all the annotations."""
-        return {b.label for b in self.all_bounding_boxes()}  
+        return {b.label for b in self.all_bounding_boxes()}
 
     def all_bounding_boxes(self) -> Iterator[BoundingBox]:
         """Iterator of all bounding boxes."""
@@ -161,6 +170,9 @@ class Annotations:
         """
         Filter all bounding boxes given the box predicate.
         
+        WARNING: This can results in empty annotatations. You can 
+        remove such annotations with the `.remove_empty()` method.
+        
         Parameters:
         - is_included: the box predicate.
         """
@@ -170,7 +182,7 @@ class Annotations:
 
     def remove_empty(self) -> "Annotations":
         """Removes empty annotations."""
-        self.annotations = [a for a in self.annotations if len(a.boxes) > 0]
+        self.annotations = [a for a in self.annotations if not a.is_empty]
         return self
 
     def print_stats(self) -> "Annotations":
