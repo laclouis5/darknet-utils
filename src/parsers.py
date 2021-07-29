@@ -1,11 +1,15 @@
+import logging
 from .bounding_box import BoundingBox
 from .annotation import Annotation, Annotations
 
 from os import PathLike
 from pathlib import Path
+import logging
 
 import lxml.etree as ET
 
+
+logging.basicConfig(filename="parser.log")
 
 def parse_xml_file(file: PathLike) -> Annotation:
     """
@@ -21,19 +25,28 @@ def parse_xml_file(file: PathLike) -> Annotation:
     - file: the xml file to process.
     
     Returns:
-    - An object representing the image annotations.
+    - An object representing the image annotations or None if 
+    the .xml file was not readable.
     """
-    tree = ET.parse(str(file)).getroot()
 
-    path = tree.find("path").text
-    name = tree.find("filename").text
+    try:
+        tree = ET.parse(str(file)).getroot()
+        
+        path = tree.find("path").text
+        name = tree.find("filename").text
+
+        img_size_et = tree.find("size")
+        img_w = int(img_size_et.find("width").text)
+        img_h = int(img_size_et.find("height").text)
+
+        boxes = [_read_xml_object(o) for o in tree.findall("object")]
+    except:
+        logging.warning(f"Error while reading '{file}'.")
+        return None
+
     image_path = Path(path).with_name(name).expanduser().resolve()
 
-    img_size_et = tree.find("size")
-    img_w = int(img_size_et.find("width").text)
-    img_h = int(img_size_et.find("height").text)
-
-    return Annotation(image_path, (img_w, img_h), [_read_xml_object(o) for o in tree.findall("object")])
+    return Annotation(image_path, (img_w, img_h), boxes)
 
 
 def parse_xml_folder(folder: PathLike, recursive=False) -> Annotations:
@@ -49,7 +62,8 @@ def parse_xml_folder(folder: PathLike, recursive=False) -> Annotations:
     """
     folder = Path(folder).expanduser().resolve()
     files = folder.glob("**/*.xml" if recursive else "*.xml")
-    return Annotations([parse_xml_file(f) for f in files])
+    annotations = (parse_xml_file(f) for f in files)
+    return Annotations([a for a in annotations if a])
 
 
 def parse_xml_folders(folders: "list[PathLike]", recursive=False) -> Annotations:
