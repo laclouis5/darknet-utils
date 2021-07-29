@@ -86,7 +86,7 @@ class Annotation:
 
         side = min(self.image_size) * ratio / 2
         for box in self.boxes:
-            if labels is not None and box.label in labels:
+            if labels is None or (labels is not None and box.label in labels):
                 xmid, ymid = box.xmid, box.ymid
                 box._xmin = xmid - side
                 box._ymin = ymid - side
