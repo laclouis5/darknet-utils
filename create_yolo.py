@@ -48,7 +48,6 @@ if __name__ == "__main__":
     elif args.norm is not None:
         annotations.square_boxes(ratio=args.norm_ratio, labels=args.norm)
 
-
     annotations.map_labels(labels_to_numbers)
 
     create_yolo_trainval(
@@ -56,5 +55,5 @@ if __name__ == "__main__":
         save_dir=args.save_dir, 
         train_ratio=args.train_ratio, 
         exist_ok=True)
-        
+
     (args.save_dir / "obj.names").write_text("\n".join(labels))
