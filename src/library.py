@@ -1,14 +1,13 @@
-from .annotation import Annotations
+from .annotation import Annotation, Annotations
 from .utils import *
 
+from concurrent.futures import ThreadPoolExecutor
+from tqdm.contrib.concurrent import thread_map
 from os import PathLike
 from pathlib import Path
 from random import Random
 import shutil
-
 import lxml.etree as ET
-from tqdm.contrib import tenumerate
-from tqdm.contrib.concurrent import thread_map
 
 
 def create_yolo_trainval(
@@ -63,7 +62,9 @@ def create_yolo_trainval(
 
     len_train = int(train_ratio * len(annotations))
 
-    for i, annotation in tenumerate(annotations, unit="imgs"):
+    def create_annotation(indexed_annotation: "tuple[int, Annotation]") -> str:
+        i, annotation = indexed_annotation
+
         dir = train_dir if i < len_train else valid_dir
         img_filename = dir / f"im_{i:06}{annotation.image_path.suffix}"
         ann_filename = img_filename.with_suffix(".txt")
@@ -71,16 +72,19 @@ def create_yolo_trainval(
         shutil.copy(annotation.image_path, img_filename)
         ann_filename.write_text(annotation.yolo_repr())
 
+        return img_filename.name
+
+    image_names = thread_map(create_annotation, enumerate(annotations), 
+        total=len(annotations), unit="imgs")
+
     train_file = save_dir / "train.txt"
     valid_file = save_dir / "val.txt"
     names_file = save_dir / "obj.names"
 
     train_file.write_text(
-        "\n".join(str(prefix / f"train/im_{i:06}{annotation.image_path.suffix}")
-            for i in range(len_train)))
+        "\n".join(str(prefix / f"train/{n}") for n in image_names[:len_train]))
     valid_file.write_text(
-        "\n".join(str(prefix / f"val/im_{i:06}{annotation.image_path.suffix}" )
-            for i in range(len_train, len(annotations))))
+        "\n".join(str(prefix / f"val/{n}") for n in image_names[len_train:]))
 
     names_file.write_text("\n".join(labels))
 
@@ -135,11 +139,16 @@ def resolve_xml_file_paths(folders: "list[PathLike]", recursive: bool = False):
     Parameters:
     - folders: paths to folders with .xml files to process
     """
-    for folder in folders:
-        folder = Path(folder).expanduser().resolve()
-        
-        for file in folder.glob("**/*.xml" if recursive else "*.xml"):
-            filename = str(file)
-            tree = ET.parse(filename)
-            tree.find("path").text = filename
-            file.write_text(ET.tostring(tree, encoding="unicode", pretty_print=True))
+    files = (f for folder in folders for f in folder.glob("**/*.xml" if recursive else "*.xml"))
+    executor = ThreadPoolExecutor()
+    executor.map(_resolve, files)
+
+
+def _resolve(file: Path):
+    filename = str(file)
+    try:
+        tree = ET.parse(filename)
+        tree.find("path").text = filename
+    except:
+        return
+    file.write_text(ET.tostring(tree, encoding="unicode", pretty_print=True))
