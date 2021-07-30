@@ -77,7 +77,7 @@ def create_yolo_trainval(
         except KeyboardInterrupt:
             shutil.copyfile(annotation.image_path, img_filename)
             ann_filename.write_text(ann_content)
-            exit(0)
+            exit()
 
         return img_filename.name
 
@@ -138,7 +138,7 @@ def create_noobj_folder(
             path.write_text(content)
         except KeyboardInterrupt:
             path.write_text(content)
-            exit(0)
+            exit()
 
 
 def resolve_xml_file_paths(folders: "list[PathLike]", recursive: bool = False):
@@ -169,4 +169,4 @@ def _resolve(file: Path):
             file.write_text(content)
         except KeyboardInterrupt:
             file.write_text(content)
-            exit(0)
+            exit()
