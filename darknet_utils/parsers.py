@@ -57,7 +57,7 @@ def parse_xml_file(file: PathLike, labels: Sequence[str] = None) -> Annotation:
         # Remove empty annotations resulting from the box label filtering
         if len(object_nodes) != 0 and len(boxes) == 0:
             return None
-    except:
+    except ET.ParseError:
         logging.warning(f"Error while reading '{file}'.")
         return None
 

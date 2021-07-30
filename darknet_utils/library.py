@@ -3,6 +3,7 @@ from .utils import *
 
 from concurrent.futures import ThreadPoolExecutor
 from tqdm.contrib.concurrent import thread_map
+from sys import exit
 from os import PathLike
 from pathlib import Path
 from random import Random
@@ -68,9 +69,15 @@ def create_yolo_trainval(
         dir = train_dir if i < len_train else valid_dir
         img_filename = dir / f"im_{i:06}{annotation.image_path.suffix}"
         ann_filename = img_filename.with_suffix(".txt")
+        ann_content = annotation.yolo_repr()
 
-        shutil.copy(annotation.image_path, img_filename)
-        ann_filename.write_text(annotation.yolo_repr())
+        try:
+            shutil.copyfile(annotation.image_path, img_filename)
+            ann_filename.write_text(ann_content)
+        except KeyboardInterrupt:
+            shutil.copyfile(annotation.image_path, img_filename)
+            ann_filename.write_text(ann_content)
+            exit(0)
 
         return img_filename.name
 
@@ -126,7 +133,12 @@ def create_noobj_folder(
         ET.SubElement(et_img_size, "height").text = str(img_h)
         ET.SubElement(et_img_size, "depth").text = "3"
 
-        path.write_text(ET.tostring(tree, encoding="unicode", pretty_print=True))
+        content = ET.tostring(tree, encoding="unicode", pretty_print=True)
+        try: 
+            path.write_text(content)
+        except KeyboardInterrupt:
+            path.write_text(content)
+            exit(0)
 
 
 def resolve_xml_file_paths(folders: "list[PathLike]", recursive: bool = False):
@@ -149,6 +161,12 @@ def _resolve(file: Path):
     try:
         tree = ET.parse(filename)
         tree.find("path").text = filename
-    except:
+    except ET.ParseError: 
         return
-    file.write_text(ET.tostring(tree, encoding="unicode", pretty_print=True))
+    else:
+        content = ET.tostring(tree, encoding="unicode", pretty_print=True)
+        try:  # Avoid data corruption if KeyboardInterrupt while writing
+            file.write_text(content)
+        except KeyboardInterrupt:
+            file.write_text(content)
+            exit(0)

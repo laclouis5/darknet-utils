@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from src import *
+from darknet_utils import *
 
 from pathlib import Path
 from argparse import ArgumentParser
