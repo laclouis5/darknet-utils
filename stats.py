@@ -5,6 +5,9 @@ from darknet_utils import *
 from pathlib import Path
 from argparse import ArgumentParser
 
+from rich.table import Table
+from rich import print as rprint
+
 
 def parse_args():
     parser = ArgumentParser(description="Print stats about the XML annotations contained in specified directories.")
@@ -33,3 +36,24 @@ if __name__ == "__main__":
         annotations.remove_empty()
 
     annotations.print_stats()
+
+    sizes = defaultdict(list)
+    for annotation in annotations:
+        img_g, img_h = annotation.image_size
+
+        for box in annotation.boxes:
+            area = box.area / img_g / img_h
+            sizes[box.label].append(area)
+
+    total = [s for v in sizes.values() for s in v]
+    total = sum(total) / len(total)
+    sizes = {l: sum(v) / len(v) for l, v in sizes.items()}
+
+    table = Table(title="Mean box area", show_footer=True)
+    table.add_column("Label", footer="Total")
+    table.add_column("Mean Area", footer=f"{total:.2%}", justify="right")
+
+    for label, area in sizes.items():
+        table.add_row(label, f"{area:.2%}")
+
+    rprint(table)
