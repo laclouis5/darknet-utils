@@ -9,8 +9,9 @@ def get_image_size(image: str) -> "tuple[int, int]":
 
 T = TypeVar("T")
 S = TypeVar("S", bound=Hashable)
-def dict_grouping(it: Sequence[T], by_key: Callable[[T], S]) -> "defaultdict[S, list[T]]":
-    d = defaultdict(list)
-    for e in it: 
-        d[by_key(e)].append(e)
-    return d
+def dict_grouping(iterable: Sequence[T], by_key: Callable[[T], S]) -> "defaultdict[S, list[T]]":
+    ret = defaultdict(list)
+    for item in iterable:
+        ret[by_key(item)].append(item)
+    ret.default_factory = None
+    return ret

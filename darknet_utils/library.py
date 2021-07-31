@@ -57,6 +57,8 @@ def create_yolo_trainval(
     annotations.map_labels(labels_to_numbers)
 
     if shuffle:
+        # FIXME: Ugly `.annotations`, should change this.
+        # `Annotations` should be an iterable or collection.
         annotations.annotations = sorted(annotations, key=lambda a: a.image_path)
         random_gen = Random(random_seed)
         random_gen.shuffle(annotations)

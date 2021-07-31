@@ -146,9 +146,10 @@ class Annotations:
 
     def labels(self) -> "set[str]":
         """Returns the unique labels of all the annotations."""
-        return {b.label for b in self.all_bounding_boxes()}
+        return {b.label for b in self.boxes}
 
-    def all_bounding_boxes(self) -> Iterator[BoundingBox]:
+    @property
+    def boxes(self) -> Iterator[BoundingBox]:
         """Iterator of all bounding boxes."""
         for annotation in self.annotations:
             yield from annotation.boxes
