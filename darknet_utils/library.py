@@ -111,7 +111,7 @@ def create_noobj_folder(
     - img_ext: the image extension to consider
     """
     folder = Path(folder).expanduser().resolve()
-    images = folder.glob(f"*{img_ext}")
+    images = glob(folder, img_ext)
     
     for image in images:
         filename = image.name
