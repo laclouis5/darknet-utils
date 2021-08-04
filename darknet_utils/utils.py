@@ -25,7 +25,7 @@ def glob(folder: Path, extension: str, recursive: bool = False) -> Iterator[Path
     assert extension.startswith("."), "Parameter 'extension' should start with a '.'."
 
     extension = extension.lower()
-    files = folder.glob(f"**/*") if recursive else folder.glob(f"*")
+    files = folder.glob("**/*") if recursive else folder.glob("*")
 
     return (f for f in files if f.suffix.lower() == extension and not f.name.startswith("."))
     
