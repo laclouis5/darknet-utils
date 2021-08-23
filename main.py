@@ -80,11 +80,10 @@ if __name__ == "__main__":
 
     folders = [base_path / folder for folder in folders]
     no_obj_dir = base_path / "training_set/no_obj/"
-
-    # fr_to_en = {"mais": "maize", "haricot": "bean", "mais_tige": "stem_maize", "haricot_tige": "stem_bean"}
-    fr_to_en = {"poireau": "leek", "poireau_tige": "stem_leek"}
-    en_to_nb = {l: str(i) for i, l in enumerate(fr_to_en.values())}
-    labels = set(fr_to_en.keys())
+    labels = [
+        "mais", "haricot", "poireau",
+        "mais_tige", "haricot_tige", "poireau_tige"]
+    to_nb = {l: str(i) for i, l in enumerate(labels)}
     stem_labels = {l for l in labels if "tige" in l}
 
     resolve_xml_file_paths(folders)
@@ -92,8 +91,7 @@ if __name__ == "__main__":
 
     annotations = parse_xml_folders(folders, labels=labels) \
         .square_boxes(ratio=7.5/100, labels=stem_labels) \
-        .map_labels(fr_to_en) \
-        .map_labels(en_to_nb)
+        # .map_labels(to_nb)
 
     annotations += parse_xml_folder(no_obj_dir)
     annotations.print_stats()
