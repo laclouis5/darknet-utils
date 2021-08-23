@@ -1,6 +1,8 @@
+from darknet_utils.utils import glob
 import logging
 from .bounding_box import BoundingBox
 from .annotation import Annotation, Annotations
+from .utils import glob
 
 from os import PathLike
 from pathlib import Path
@@ -51,13 +53,13 @@ def parse_xml_file(file: PathLike, labels: Sequence[str] = None) -> Annotation:
         img_h = int(img_size_node.find("height").text)
 
         object_nodes = tree.findall("object")
-        boxes = (_read_xml_object(o, labels) for o in object_nodes)
+        boxes = (_read_bndbox(o, labels) for o in object_nodes)
         boxes = [box for box in boxes if box]
 
         # Remove empty annotations resulting from the box label filtering
         if len(object_nodes) != 0 and len(boxes) == 0:
             return None
-    except:
+    except ET.ParseError:
         logging.warning(f"Error while reading '{file}'.")
         return None
 
@@ -83,7 +85,7 @@ def parse_xml_folder(
     - A list of annotations.
     """
     folder = Path(folder).expanduser().resolve()
-    files = folder.glob("**/*.xml" if recursive else "*.xml")
+    files = glob(folder, extension=".xml", recursive=recursive)
     return Annotations([ann for f in files if (ann := parse_xml_file(f, labels))])
 
 
@@ -106,7 +108,7 @@ def parse_xml_folders(
             for a in parse_xml_folder(f, recursive, labels)])
 
 
-def _read_xml_object(obj, labels: Sequence[str] = None) -> BoundingBox:
+def _read_bndbox(obj, labels: Sequence[str] = None) -> BoundingBox:
     label = obj.find("name").text
 
     if labels and label not in labels:

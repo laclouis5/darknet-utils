@@ -57,6 +57,10 @@ class BoundingBox:
     def ymax(self) -> float:
         return max(self._ymin, self._ymax)
 
+    @property
+    def area(self) -> float:
+        return self.width * self.height
+
     @xmid.setter
     def xmid(self, value):
         delta = self.xmid - value
