@@ -1,4 +1,4 @@
-from src import *
+from darknet_utils import *
 from pathlib import Path
 
 
@@ -91,7 +91,7 @@ if __name__ == "__main__":
 
     annotations = parse_xml_folders(folders, labels=labels) \
         .square_boxes(ratio=7.5/100, labels=stem_labels) \
-        # .map_labels(to_nb)
+        .map_labels(to_nb)
 
     annotations += parse_xml_folder(no_obj_dir)
     annotations.print_stats()
