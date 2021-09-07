@@ -35,7 +35,7 @@ def create_yolo_trainval(
     - annotations: the annotations for the database creation.
     - labels: list of labels specifying the label order in `obj.names`.
     - save_dir: the path where to store the YOLO database.
-    - prefix: optional path prefix to insert before the image.
+    - prefix: optional path prefix to insert before the image
     paths stored in train.txt and val.txt.
     - train_ratio: the percent of images to use in the training set.
     - shuffle: set to True to shuffle the dataset.

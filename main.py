@@ -76,14 +76,16 @@ if __name__ == "__main__":
         "training_set/2021-07-20_ctifl/p0721_0910",
         "training_set/2021-07-20_ctifl/p0728_1738",
         "training_set/2021-07-20_ctifl/p0802_0500",
+        # Database 12.0
+        "training_set/2021-09-07_bergerac/",
     ]
 
     folders = [base_path / folder for folder in folders]
     no_obj_dir = base_path / "training_set/no_obj/"
-    labels = [
-        "mais", "haricot", "poireau",
-        "mais_tige", "haricot_tige", "poireau_tige"]
-    to_nb = {l: str(i) for i, l in enumerate(labels)}
+    fr_to_en = {
+        "mais": "maize", "haricot": "bean", "poireau": "leek",
+        "mais_tige": "stem_maize", "haricot_tige": "stem_bean", "poireau_tige": "stem_leek"}
+    labels = fr_to_en.keys()
     stem_labels = {l for l in labels if "tige" in l}
 
     resolve_xml_file_paths(folders)
@@ -91,9 +93,11 @@ if __name__ == "__main__":
 
     annotations = parse_xml_folders(folders, labels=labels) \
         .square_boxes(ratio=7.5/100, labels=stem_labels) \
-        .map_labels(to_nb)
+        .map_labels(fr_to_en)
 
     annotations += parse_xml_folder(no_obj_dir)
     annotations.print_stats()
 
-    create_yolo_trainval(annotations, exist_ok=True)
+    create_yolo_trainval(annotations, 
+        labels=fr_to_en.values(),
+        exist_ok=True)
